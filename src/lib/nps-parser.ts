@@ -45,15 +45,22 @@ const extractNPSDataFromText = (text: string): NPSAccount => {
   }
 
   // Attempt to extract 'Value of your Holdings'
-  // Often it comes in a table format: (A) ... 343630.01
-  const holdingMatch = text.match(/\(A\)\s+([\d,\.]+)/);
-  if (holdingMatch) {
-    data.openingBalanceTier1 = parseFloat(holdingMatch[1].replace(/,/g, '')) || 0;
+  // Depending on how pdf.js extracts the table (row-by-row vs column-by-column)
+  // If row-by-row, the headers (A) (B) (C) D=(A-B)+C are printed, followed by the values starting with Holding.
+  const rowMatch = text.match(/D=\(A-B\)\+C\s*([\d,\.]+)/);
+  if (rowMatch) {
+    data.openingBalanceTier1 = parseFloat(rowMatch[1].replace(/,/g, '')) || 0;
   } else {
-    // Try matching explicitly
-    const explicitMatch = text.match(/Value of your Holdings.*?([\d,\.]+)(?=\s|$)/i);
-    if (explicitMatch) {
-      data.openingBalanceTier1 = parseFloat(explicitMatch[1].replace(/,/g, '')) || 0;
+    // If column-by-column, (A) is directly followed by the holding value
+    const colMatch = text.match(/\(A\)\s*([\d,\.]+)/);
+    if (colMatch) {
+      data.openingBalanceTier1 = parseFloat(colMatch[1].replace(/,/g, '')) || 0;
+    } else {
+      // Fallback, try to find a large number after "Value of your Holdings" skipping the date
+      const explicitMatch = text.match(/Value of your Holdings(?:.|\n)*?\(in Rs\)(?:.|\n)*?(?:D=\(A-B\)\+C|\(A\))(?:.|\n)*?([\d,\.]+)/i);
+      if (explicitMatch) {
+        data.openingBalanceTier1 = parseFloat(explicitMatch[1].replace(/,/g, '')) || 0;
+      }
     }
   }
 
