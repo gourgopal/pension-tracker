@@ -75,15 +75,18 @@ const extractDataFromText = (text: string): EPFData => {
     // WageMonth Date Type Particulars EPFWage EPSWage EE ER EPS
     const txnMatch = line.match(/([a-z]{3}-\d{4})\s+(\d{2}-\d{2}-\d{4})\s+(CR|DR)\s+(.+?)\s+([\d,]+)\s+([\d,]+)\s+([\d,]+)\s+([\d,]+)\s+([\d,]+)/i);
     if (txnMatch) {
+      const isDebit = txnMatch[3].toUpperCase() === 'DR';
+      const multiplier = isDebit ? -1 : 1;
+
       data.transactions.push({
         wageMonth: txnMatch[1],
         date: txnMatch[2],
         particulars: txnMatch[4].trim(),
         epfWage: parseAmt(txnMatch[5]),
         epsWage: parseAmt(txnMatch[6]),
-        eeShare: parseAmt(txnMatch[7]),
-        erShare: parseAmt(txnMatch[8]),
-        epsShare: parseAmt(txnMatch[9]),
+        eeShare: parseAmt(txnMatch[7]) * multiplier,
+        erShare: parseAmt(txnMatch[8]) * multiplier,
+        epsShare: parseAmt(txnMatch[9]) * multiplier,
         isInterest: false
       });
     }

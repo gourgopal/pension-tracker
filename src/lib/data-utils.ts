@@ -28,6 +28,17 @@ export const mergeEPFData = (existing: EPFData, newData: EPFData): EPFData => {
 
   uniqueTxns.sort((a, b) => parseDate(a.date, a.wageMonth) - parseDate(b.date, b.wageMonth));
 
+  let useNewDataOB = false;
+  if (existing.transactions.length > 0 && newData.transactions.length > 0) {
+    const existingFirstTxn = [...existing.transactions].sort((a, b) => parseDate(a.date, a.wageMonth) - parseDate(b.date, b.wageMonth))[0];
+    const newFirstTxn = [...newData.transactions].sort((a, b) => parseDate(a.date, a.wageMonth) - parseDate(b.date, b.wageMonth))[0];
+    if (parseDate(newFirstTxn.date, newFirstTxn.wageMonth) < parseDate(existingFirstTxn.date, existingFirstTxn.wageMonth)) {
+      useNewDataOB = true;
+    }
+  } else if (existing.transactions.length === 0) {
+    useNewDataOB = true;
+  }
+
   return {
     ...existing,
     memberId: existing.memberId || newData.memberId,
@@ -36,6 +47,9 @@ export const mergeEPFData = (existing: EPFData, newData: EPFData): EPFData => {
     establishmentName: existing.establishmentName || newData.establishmentName,
     uan: existing.uan || newData.uan,
     dob: existing.dob || newData.dob,
+    openingBalanceEE: useNewDataOB ? newData.openingBalanceEE : existing.openingBalanceEE,
+    openingBalanceER: useNewDataOB ? newData.openingBalanceER : existing.openingBalanceER,
+    openingBalanceEPS: useNewDataOB ? newData.openingBalanceEPS : existing.openingBalanceEPS,
     transactions: uniqueTxns
   };
 };

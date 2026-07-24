@@ -59,7 +59,7 @@ export default function Dashboard() {
       if (!prevPortfolio) return prevPortfolio;
       
       const existingIndex = prevPortfolio.accounts.findIndex(a => 
-        a.type === 'EPF' && (a as EPFAccount).uan === data.uan
+        a.type === 'EPF' && (a as EPFAccount).memberId === data.memberId
       );
 
       let newAccounts = [...prevPortfolio.accounts];
