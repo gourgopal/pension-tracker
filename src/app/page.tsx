@@ -55,48 +55,55 @@ export default function Dashboard() {
   };
 
   const handleDataParsed = (data: EPFData) => {
-    if (!portfolio) return;
-    
-    // Check if we already have an EPF account with this memberId/UAN
-    const existingIndex = portfolio.accounts.findIndex(a => 
-      a.type === 'EPF' && (a as EPFAccount).uan === data.uan
-    );
+    setPortfolio(prevPortfolio => {
+      if (!prevPortfolio) return prevPortfolio;
+      
+      const existingIndex = prevPortfolio.accounts.findIndex(a => 
+        a.type === 'EPF' && (a as EPFAccount).uan === data.uan
+      );
 
-    if (existingIndex >= 0) {
-      // Merge with existing EPF account
-      const existingAccount = portfolio.accounts[existingIndex] as EPFAccount;
-      const mergedData = mergeEPFData(existingAccount, data);
+      let newAccounts = [...prevPortfolio.accounts];
+      let targetId = '';
+
+      if (existingIndex >= 0) {
+        const existingAccount = prevPortfolio.accounts[existingIndex] as EPFAccount;
+        const mergedData = mergeEPFData(existingAccount, data);
+        newAccounts[existingIndex] = {
+          ...existingAccount,
+          ...mergedData
+        } as EPFAccount;
+        targetId = existingAccount.id;
+      } else {
+        const newAccount: EPFAccount = {
+          id: uuidv4(),
+          type: 'EPF',
+          name: data.establishmentName || 'My EPF Account',
+          establishmentId: data.establishmentId,
+          establishmentName: data.establishmentName,
+          memberId: data.memberId,
+          memberName: data.memberName,
+          uan: data.uan,
+          dob: data.dob,
+          openingBalanceEE: data.openingBalanceEE,
+          openingBalanceER: data.openingBalanceER,
+          openingBalanceEPS: data.openingBalanceEPS,
+          transactions: data.transactions,
+        };
+        newAccounts.push(newAccount);
+        targetId = newAccount.id;
+      }
+
+      const newPortfolio = { accounts: newAccounts };
+      localStorage.setItem("pensionTrackerPortfolio", JSON.stringify(newPortfolio));
       
-      const newAccounts = [...portfolio.accounts];
-      newAccounts[existingIndex] = {
-        ...existingAccount,
-        ...mergedData
-      } as EPFAccount;
-      
-      savePortfolio({ accounts: newAccounts });
-      setSelectedAccountId(existingAccount.id);
-    } else {
-      // Create new EPF account
-      const newAccount: EPFAccount = {
-        id: uuidv4(),
-        type: 'EPF',
-        name: data.establishmentName || 'My EPF Account',
-        establishmentId: data.establishmentId,
-        establishmentName: data.establishmentName,
-        memberId: data.memberId,
-        memberName: data.memberName,
-        uan: data.uan,
-        dob: data.dob,
-        openingBalanceEE: data.openingBalanceEE,
-        openingBalanceER: data.openingBalanceER,
-        openingBalanceEPS: data.openingBalanceEPS,
-        transactions: data.transactions,
-      };
-      
-      savePortfolio({ accounts: [...portfolio.accounts, newAccount] });
-      setSelectedAccountId(newAccount.id);
-    }
-    setShowAddAccount(false);
+      // Only set selected account ID if we're not currently viewing one, or if we are viewing the portfolio
+      setTimeout(() => {
+        setSelectedAccountId(targetId);
+        setShowAddAccount(false);
+      }, 0);
+
+      return newPortfolio;
+    });
   };
 
   const handleAccountUpdated = (updatedAccount: PensionAccount) => {
