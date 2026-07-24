@@ -1,25 +1,25 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { EPFData, Transaction } from "@/lib/types";
+import { EPFAccount, Transaction } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Trash2, Plus, Save } from "lucide-react";
 
 interface DataEditorProps {
-  data: EPFData | null;
-  onUpdate: (data: EPFData) => void;
+  data: EPFAccount | null;
+  onUpdate: (data: EPFAccount) => void;
 }
 
 export function DataEditor({ data, onUpdate }: DataEditorProps) {
   if (!data) return null;
 
-  const [localData, setLocalData] = useState<EPFData>({ ...data });
+  const [localData, setLocalData] = useState<EPFAccount>({ ...data });
 
   useEffect(() => {
     setLocalData({ ...data });
   }, [data]);
 
-  const handleOBChange = (field: keyof EPFData, value: string) => {
+  const handleOBChange = (field: keyof EPFAccount, value: string) => {
     const numValue = parseFloat(value) || 0;
     setLocalData({ ...localData, [field]: numValue });
   };

@@ -36,7 +36,7 @@ export function FileUpload({ onDataParsed, compact = false }: FileUploadProps) {
       onDataParsed(parsedData);
     } catch (error) {
       console.error("Error parsing PDF:", error);
-      alert("Failed to parse PDF. Are you sure this is an EPFO passbook?");
+      alert("Failed to parse PDF. Ensure it is a valid EPF passbook. NPS passbook parsing is coming soon!");
     } finally {
       setLoading(false);
     }
@@ -72,7 +72,7 @@ export function FileUpload({ onDataParsed, compact = false }: FileUploadProps) {
       {!compact && (
         <>
           <UploadCloud className="w-12 h-12 text-slate-400 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-slate-700">Drag & Drop your EPF Passbook PDF</h3>
+          <h3 className="text-lg font-semibold text-slate-700">Drag & Drop your EPF/NPS Passbook PDF</h3>
           <p className="text-sm text-slate-500 mt-2 mb-6">
             All processing happens directly in your browser. 100% private.
           </p>
