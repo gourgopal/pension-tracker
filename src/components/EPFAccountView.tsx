@@ -7,10 +7,11 @@ import { ContributionBar } from "./Charts/ContributionBar";
 import { ProjectionCalculator } from "./ProjectionCalculator";
 import { DataEditor } from "./DataEditor";
 import { EPFAccount } from "@/lib/types";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { calculateProjectedInterest } from "@/lib/data-utils";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Download, ArrowLeft } from "lucide-react";
+import { Download, ArrowLeft, Lightbulb, TrendingUp } from "lucide-react";
 import dynamic from "next/dynamic";
 
 const FileUpload = dynamic(
@@ -35,6 +36,24 @@ export function EPFAccountView({ account, onBack, onUpdate, onNewFileParsed }: E
     const lastTxn = regularTxns[regularTxns.length - 1];
     latestMonthlyContribution = lastTxn.eeShare + lastTxn.erShare;
   }
+  
+  const projectedInterest = calculateProjectedInterest(account);
+  
+  const addProjectedInterest = () => {
+    const d = new Date();
+    const newTxn = {
+      date: 'Year End',
+      wageMonth: 'Annual',
+      particulars: 'Projected Interest (Est)',
+      epfWage: 0,
+      epsWage: 0,
+      eeShare: projectedInterest.amount,
+      erShare: 0, // Simplified to add all to EE for projection purposes
+      epsShare: 0,
+      isInterest: true
+    };
+    onUpdate({ ...account, transactions: [...account.transactions, newTxn] });
+  };
 
   const exportCSV = () => {
     const headers = ["Date", "Wage Month", "Particulars", "EPF Wage", "EPS Wage", "EE Share", "ER Share", "EPS Share"];
@@ -75,6 +94,26 @@ export function EPFAccountView({ account, onBack, onUpdate, onNewFileParsed }: E
           Export CSV
         </Button>
       </div>
+      
+      {projectedInterest.isOutdated && (
+        <Card className="bg-amber-50 border-amber-200 shadow-sm animate-in fade-in">
+          <CardContent className="p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex items-start gap-3">
+              <div className="bg-amber-100 p-2 rounded-full mt-0.5">
+                <Lightbulb className="w-5 h-5 text-amber-600" />
+              </div>
+              <div>
+                <h4 className="font-semibold text-amber-900">Your passbook is {projectedInterest.months} months outdated.</h4>
+                <p className="text-sm text-amber-700 mt-1">Based on an 8.25% rate, you have approximately <strong>₹{projectedInterest.amount.toLocaleString('en-IN')}</strong> in pending interest to be credited.</p>
+              </div>
+            </div>
+            <Button onClick={addProjectedInterest} className="bg-amber-500 hover:bg-amber-600 text-white shrink-0 shadow-sm">
+              <TrendingUp className="w-4 h-4 mr-2" />
+              Add Projected Interest
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       <MetricCards data={account} />
 

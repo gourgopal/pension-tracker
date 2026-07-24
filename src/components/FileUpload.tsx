@@ -1,18 +1,28 @@
 "use client";
 
 import React, { useState, useRef } from "react";
-import { UploadCloud } from "lucide-react";
-import { parseEPFPassbook } from "@/lib/epf-parser";
-import { EPFData } from "@/lib/types";
+import { UploadCloud, Lock } from "lucide-react";
+import { parsePassbook } from "@/lib/parser-entry";
+import { PensionAccount } from "@/lib/types";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 
 interface FileUploadProps {
-  onDataParsed: (data: EPFData) => void;
+  onDataParsed: (data: any) => void;
   compact?: boolean;
 }
 
 export function FileUpload({ onDataParsed, compact = false }: FileUploadProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [passwordPrompt, setPasswordPrompt] = useState<{ isOpen: boolean; file: File | null; passwordValue: string; error: string }>({
+    isOpen: false,
+    file: null,
+    passwordValue: '',
+    error: ''
+  });
+  
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -25,21 +35,48 @@ export function FileUpload({ onDataParsed, compact = false }: FileUploadProps) {
     setIsDragging(false);
   };
 
-  const processFile = async (file: File) => {
+  const processFile = async (file: File, password?: string) => {
     if (file.type !== "application/pdf") {
       alert("Please upload a valid PDF file.");
       return;
     }
+    
     setLoading(true);
     try {
-      const parsedData = await parseEPFPassbook(file);
+      const parsedData = await parsePassbook(file, password);
       onDataParsed(parsedData);
-    } catch (error) {
+      
+      // Close password modal if it was open and successful
+      if (passwordPrompt.isOpen) {
+        setPasswordPrompt({ isOpen: false, file: null, passwordValue: '', error: '' });
+      }
+    } catch (error: any) {
       console.error("Error parsing PDF:", error);
-      alert("Failed to parse PDF. Ensure it is a valid EPF passbook. NPS passbook parsing is coming soon!");
+      
+      if (error.name === "PasswordException" || (error.message && error.message.includes("Password"))) {
+        // Show password prompt
+        setPasswordPrompt({
+          isOpen: true,
+          file,
+          passwordValue: '',
+          error: password ? 'Incorrect password. Please try again.' : ''
+        });
+      } else {
+        alert("Failed to parse PDF. Ensure it is a valid EPF or NPS passbook.");
+        if (passwordPrompt.isOpen) {
+           setPasswordPrompt({ ...passwordPrompt, error: 'Failed to parse file with this password.' });
+        }
+      }
     } finally {
       setLoading(false);
     }
+  };
+
+  const handlePasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!passwordPrompt.file || !passwordPrompt.passwordValue) return;
+    
+    await processFile(passwordPrompt.file, passwordPrompt.passwordValue);
   };
 
   const handleDrop = async (e: React.DragEvent) => {
@@ -98,6 +135,49 @@ export function FileUpload({ onDataParsed, compact = false }: FileUploadProps) {
         <UploadCloud className={`mr-2 ${compact ? "w-4 h-4" : "hidden"}`} />
         {loading ? "Parsing..." : "Select File"}
       </button>
+
+      <Dialog open={passwordPrompt.isOpen} onOpenChange={(isOpen) => {
+        if (!isOpen) setPasswordPrompt({ isOpen: false, file: null, passwordValue: '', error: '' });
+      }}>
+        <DialogContent className="sm:max-w-md">
+          <form onSubmit={handlePasswordSubmit}>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Lock className="w-5 h-5 text-amber-500" />
+                Password Required
+              </DialogTitle>
+              <DialogDescription>
+                This PDF is encrypted. <br/><br/>
+                <strong>For NPS CAS statements</strong>, the password is usually the first 4 letters of your name (lowercase) followed by your date of birth (DDMM). e.g., <code>gour0512</code>.
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="py-4">
+              <Input
+                id="password"
+                type="password"
+                placeholder="Enter document password"
+                value={passwordPrompt.passwordValue}
+                onChange={(e) => setPasswordPrompt({...passwordPrompt, passwordValue: e.target.value})}
+                autoFocus
+                className={passwordPrompt.error ? "border-red-500 focus-visible:ring-red-500" : ""}
+              />
+              {passwordPrompt.error && (
+                <p className="text-red-500 text-sm mt-2">{passwordPrompt.error}</p>
+              )}
+            </div>
+            
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setPasswordPrompt({ isOpen: false, file: null, passwordValue: '', error: '' })}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={loading || !passwordPrompt.passwordValue}>
+                {loading ? "Decrypting..." : "Decrypt & Parse"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

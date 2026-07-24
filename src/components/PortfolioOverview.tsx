@@ -4,8 +4,9 @@ import React from "react";
 import { Portfolio, PensionAccount } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Wallet, PiggyBank, Briefcase } from "lucide-react";
-import { getPortfolioTotal, getAccountCorpus } from "@/lib/data-utils";
+import { Plus, Wallet, PiggyBank, Briefcase, TrendingUp } from "lucide-react";
+import { getPortfolioTotal, getAccountCorpus, getPortfolioChartData } from "@/lib/data-utils";
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 interface PortfolioOverviewProps {
   portfolio: Portfolio;
@@ -15,6 +16,7 @@ interface PortfolioOverviewProps {
 
 export function PortfolioOverview({ portfolio, onSelectAccount, onAddAccount }: PortfolioOverviewProps) {
   const grandTotal = getPortfolioTotal(portfolio);
+  const chartData = getPortfolioChartData(portfolio);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-IN', {
@@ -56,6 +58,35 @@ export function PortfolioOverview({ portfolio, onSelectAccount, onAddAccount }: 
         <CardContent className="relative z-10">
           <div className="text-5xl font-bold tracking-tight">{formatCurrency(grandTotal)}</div>
           <p className="text-slate-400 mt-2 text-sm">Aggregated across {portfolio.accounts.length} account{portfolio.accounts.length !== 1 ? 's' : ''}</p>
+          
+          {chartData.length > 1 && (
+            <div className="h-48 mt-8 -mx-6 -mb-6">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={chartData} margin={{ top: 10, right: 0, left: 0, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.5}/>
+                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <Tooltip 
+                    formatter={(value: any) => formatCurrency(Number(value))}
+                    labelFormatter={(label) => `Date: ${label}`}
+                    contentStyle={{ backgroundColor: '#1e293b', border: 'none', borderRadius: '8px', color: '#f8fafc' }}
+                    itemStyle={{ color: '#f8fafc' }}
+                  />
+                  <Area 
+                    type="monotone" 
+                    dataKey="totalCorpus" 
+                    stroke="#3b82f6" 
+                    strokeWidth={3}
+                    fillOpacity={1} 
+                    fill="url(#colorTotal)" 
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          )}
         </CardContent>
       </Card>
 

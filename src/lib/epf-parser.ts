@@ -3,10 +3,11 @@ import { EPFData, Transaction } from './types';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
 
-export const parseEPFPassbook = async (file: File): Promise<EPFData> => {
+export const parseEPFPassbook = async (file: File, password?: string): Promise<EPFData> => {
   const arrayBuffer = await file.arrayBuffer();
   const pdf = await pdfjsLib.getDocument({
     data: arrayBuffer,
+    password: password,
     standardFontDataUrl: `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/standard_fonts/`,
   }).promise;
   
