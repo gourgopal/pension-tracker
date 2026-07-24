@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Download, Trash2, ShieldCheck, Activity, Plus } from "lucide-react";
-import { mergeEPFData } from "@/lib/epf-parser";
+import { mergeEPFData } from "@/lib/data-utils";
 
 const FileUpload = dynamic(
   () => import("@/components/FileUpload").then((mod) => mod.FileUpload),
