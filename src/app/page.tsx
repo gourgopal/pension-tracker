@@ -54,43 +54,48 @@ export default function Dashboard() {
     localStorage.setItem("pensionTrackerPortfolio", JSON.stringify(newPortfolio));
   };
 
-  const handleDataParsed = (data: EPFData) => {
+  const handleDataParsed = (data: any) => {
     setPortfolio(prevPortfolio => {
       if (!prevPortfolio) return prevPortfolio;
       
-      const existingIndex = prevPortfolio.accounts.findIndex(a => 
-        a.type === 'EPF' && (a as EPFAccount).memberId === data.memberId
-      );
-
       let newAccounts = [...prevPortfolio.accounts];
       let targetId = '';
 
-      if (existingIndex >= 0) {
-        const existingAccount = prevPortfolio.accounts[existingIndex] as EPFAccount;
-        const mergedData = mergeEPFData(existingAccount, data);
-        newAccounts[existingIndex] = {
-          ...existingAccount,
-          ...mergedData
-        } as EPFAccount;
-        targetId = existingAccount.id;
+      if (data.type === 'NPS') {
+        newAccounts.push(data);
+        targetId = data.id;
       } else {
-        const newAccount: EPFAccount = {
-          id: uuidv4(),
-          type: 'EPF',
-          name: data.establishmentName || 'My EPF Account',
-          establishmentId: data.establishmentId,
-          establishmentName: data.establishmentName,
-          memberId: data.memberId,
-          memberName: data.memberName,
-          uan: data.uan,
-          dob: data.dob,
-          openingBalanceEE: data.openingBalanceEE,
-          openingBalanceER: data.openingBalanceER,
-          openingBalanceEPS: data.openingBalanceEPS,
-          transactions: data.transactions,
-        };
-        newAccounts.push(newAccount);
-        targetId = newAccount.id;
+        const existingIndex = prevPortfolio.accounts.findIndex(a => 
+          a.type === 'EPF' && (a as EPFAccount).memberId === data.memberId
+        );
+
+        if (existingIndex >= 0) {
+          const existingAccount = prevPortfolio.accounts[existingIndex] as EPFAccount;
+          const mergedData = mergeEPFData(existingAccount, data);
+          newAccounts[existingIndex] = {
+            ...existingAccount,
+            ...mergedData
+          } as EPFAccount;
+          targetId = existingAccount.id;
+        } else {
+          const newAccount: EPFAccount = {
+            id: uuidv4(),
+            type: 'EPF',
+            name: data.establishmentName || 'My EPF Account',
+            establishmentId: data.establishmentId,
+            establishmentName: data.establishmentName,
+            memberId: data.memberId,
+            memberName: data.memberName,
+            uan: data.uan,
+            dob: data.dob,
+            openingBalanceEE: data.openingBalanceEE,
+            openingBalanceER: data.openingBalanceER,
+            openingBalanceEPS: data.openingBalanceEPS,
+            transactions: data.transactions,
+          };
+          newAccounts.push(newAccount);
+          targetId = newAccount.id;
+        }
       }
 
       const newPortfolio = { accounts: newAccounts };
@@ -143,6 +148,21 @@ export default function Dashboard() {
       localStorage.removeItem("pensionTrackerPortfolio");
       setPortfolio({ accounts: [] });
       setSelectedAccountId(null);
+    }
+  };
+
+  const deleteAccount = (id: string) => {
+    if (confirm("Are you sure you want to remove this account from your portfolio?")) {
+      setPortfolio(prev => {
+        if (!prev) return prev;
+        const newAccounts = prev.accounts.filter(a => a.id !== id);
+        const newPortfolio = { accounts: newAccounts };
+        localStorage.setItem("pensionTrackerPortfolio", JSON.stringify(newPortfolio));
+        return newPortfolio;
+      });
+      if (selectedAccountId === id) {
+        setSelectedAccountId(null);
+      }
     }
   };
 
@@ -229,6 +249,7 @@ export default function Dashboard() {
             portfolio={portfolio} 
             onSelectAccount={setSelectedAccountId} 
             onAddAccount={() => setShowAddAccount(true)}
+            onDeleteAccount={deleteAccount}
           />
         )}
       </main>

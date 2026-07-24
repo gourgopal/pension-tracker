@@ -38,10 +38,23 @@ const extractNPSDataFromText = (text: string): NPSAccount => {
   const pranMatch = text.match(/PRAN\s*[:\-]?\s*(\d{12})/i);
   if (pranMatch) data.pran = pranMatch[1];
   
-  const nameMatch = text.match(/Name of Subscriber\s*[:\-]?\s*(.*?)(?=\n|PRAN)/i);
+  const nameMatch = text.match(/Name of Subscriber\s*[:\-]?\s*(.*?)(?=\n|PRAN|Tier)/i);
   if (nameMatch) {
     data.subscriberName = nameMatch[1].trim();
     data.name = `NPS - ${data.subscriberName}`;
+  }
+
+  // Attempt to extract 'Value of your Holdings'
+  // Often it comes in a table format: (A) ... 343630.01
+  const holdingMatch = text.match(/\(A\)\s+([\d,\.]+)/);
+  if (holdingMatch) {
+    data.openingBalanceTier1 = parseFloat(holdingMatch[1].replace(/,/g, '')) || 0;
+  } else {
+    // Try matching explicitly
+    const explicitMatch = text.match(/Value of your Holdings.*?([\d,\.]+)(?=\s|$)/i);
+    if (explicitMatch) {
+      data.openingBalanceTier1 = parseFloat(explicitMatch[1].replace(/,/g, '')) || 0;
+    }
   }
 
   // TODO: Implement actual parsing of Tier 1 & 2 balances and transactions.

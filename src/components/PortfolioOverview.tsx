@@ -4,7 +4,7 @@ import React from "react";
 import { Portfolio, PensionAccount } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Wallet, PiggyBank, Briefcase, TrendingUp } from "lucide-react";
+import { Plus, Wallet, PiggyBank, Briefcase, TrendingUp, Trash2 } from "lucide-react";
 import { getPortfolioTotal, getAccountCorpus, getPortfolioChartData } from "@/lib/data-utils";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
@@ -12,9 +12,10 @@ interface PortfolioOverviewProps {
   portfolio: Portfolio;
   onSelectAccount: (accountId: string) => void;
   onAddAccount: () => void;
+  onDeleteAccount?: (accountId: string) => void;
 }
 
-export function PortfolioOverview({ portfolio, onSelectAccount, onAddAccount }: PortfolioOverviewProps) {
+export function PortfolioOverview({ portfolio, onSelectAccount, onAddAccount, onDeleteAccount }: PortfolioOverviewProps) {
   const grandTotal = getPortfolioTotal(portfolio);
   const chartData = getPortfolioChartData(portfolio);
 
@@ -119,8 +120,22 @@ export function PortfolioOverview({ portfolio, onSelectAccount, onAddAccount }: 
                       {account.name}
                     </CardTitle>
                   </div>
-                  <div className="p-2 bg-slate-50 rounded-lg group-hover:bg-blue-50 transition-colors">
-                    {getAccountIcon(account.type)}
+                  <div className="flex items-center gap-2">
+                    {onDeleteAccount && (
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onDeleteAccount(account.id);
+                        }}
+                        className="p-2 bg-slate-50 text-slate-400 rounded-lg hover:bg-red-50 hover:text-red-500 transition-colors"
+                        title="Delete Account"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                    <div className="p-2 bg-slate-50 rounded-lg group-hover:bg-blue-50 transition-colors">
+                      {getAccountIcon(account.type)}
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent>
