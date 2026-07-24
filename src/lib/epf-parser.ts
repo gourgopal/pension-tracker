@@ -23,8 +23,6 @@ export const parseEPFPassbook = async (file: File): Promise<EPFData> => {
 };
 
 const extractDataFromText = (text: string): EPFData => {
-  const lines = text.split('\n');
-  
   const data: EPFData = {
     establishmentId: '',
     establishmentName: '',
@@ -38,78 +36,68 @@ const extractDataFromText = (text: string): EPFData => {
     transactions: []
   };
 
-  const estRegex = /Establishment ID\/Name\s*\|\s*([A-Z0-9]+)\s*\/\s*(.*)/i;
-  const memberRegex = /Member ID\/Name\s*\|\s*([A-Z0-9]+)\s*\/\s*(.*)/i;
-  
-  const parseAmt = (str: string) => parseFloat(str.replace(/,/g, '')) || 0;
-
-  for (const line of lines) {
-    if (estRegex.test(line)) {
-      const match = line.match(estRegex);
-      if (match) {
-        data.establishmentId = match[1].trim();
-        data.establishmentName = match[2].trim();
-      }
-    } else if (memberRegex.test(line)) {
-      const match = line.match(memberRegex);
-      if (match) {
-        data.memberId = match[1].trim();
-        data.memberName = match[2].trim();
-      }
-    } else if (line.includes("UAN")) {
-      const match = line.match(/UAN\s*[:\|]?\s*(\d{12})/i);
-      if (match) data.uan = match[1];
-    } else if (line.includes("Date of Birth")) {
-      const match = line.match(/Date of Birth\s*[:\|]?\s*(\d{2}-\d{2}-\d{4})/i);
-      if (match) data.dob = match[1];
-    } else if (line.includes("OB Int. Updated upto")) {
-      const match = line.match(/OB Int\. Updated upto \d{2}\/\d{2}\/\d{4}\s+([\d,]+)\s+([\d,]+)\s+([\d,]+)/i);
-      // We only want the first opening balance if multiple years are present
-      if (match && data.openingBalanceEE === 0 && data.openingBalanceER === 0) {
-        data.openingBalanceEE = parseAmt(match[1]);
-        data.openingBalanceER = parseAmt(match[2]);
-        data.openingBalanceEPS = parseAmt(match[3]);
-      }
-    }
-    
-    // WageMonth Date Type Particulars EPFWage EPSWage EE ER EPS
-    const txnMatch = line.match(/([a-z]{3}-\d{4})\s+(\d{2}-\d{2}-\d{4})\s+(CR|DR)\s+(.+?)\s+([\d,]+)\s+([\d,]+)\s+([\d,]+)\s+([\d,]+)\s+([\d,]+)/i);
-    if (txnMatch) {
-      const isDebit = txnMatch[3].toUpperCase() === 'DR';
-      const multiplier = isDebit ? -1 : 1;
-
-      data.transactions.push({
-        wageMonth: txnMatch[1],
-        date: txnMatch[2],
-        particulars: txnMatch[4].trim(),
-        epfWage: parseAmt(txnMatch[5]),
-        epsWage: parseAmt(txnMatch[6]),
-        eeShare: parseAmt(txnMatch[7]) * multiplier,
-        erShare: parseAmt(txnMatch[8]) * multiplier,
-        epsShare: parseAmt(txnMatch[9]) * multiplier,
-        isInterest: false
-      });
-    }
-    
-    // Interest lines: Int. Updated upto 31/03/2026   52,056   42,886   0
-    const interestMatch = line.trim().match(/^Int\. Updated upto \d{2}\/\d{2}\/\d{4}\s+([\d,]+)\s+([\d,]+)\s+([\d,]+)/i);
-    if (interestMatch) {
-      data.transactions.push({
-        date: 'Year End',
-        wageMonth: 'Annual',
-        particulars: 'Interest Credited',
-        epfWage: 0,
-        epsWage: 0,
-        eeShare: parseAmt(interestMatch[1]),
-        erShare: parseAmt(interestMatch[2]),
-        epsShare: parseAmt(interestMatch[3]),
-        isInterest: true
-      });
-    }
+  const estMatch = text.match(/Establishment ID\/Name\s+([A-Z0-9]+)\s*\/\s*(.*?)\s+(?:lnL|Member)/i);
+  if (estMatch) {
+    data.establishmentId = estMatch[1].trim();
+    data.establishmentName = estMatch[2].trim();
   }
 
-  // If no transactions found (mock parsing for now, user can manually enter data)
+  const memberMatch = text.match(/Member ID\/Name\s+([A-Z0-9]+)\s*\/\s*(.*?)\s+(?:tUe|Date)/i);
+  if (memberMatch) {
+    data.memberId = memberMatch[1].trim();
+    data.memberName = memberMatch[2].trim();
+  }
+
+  const uanMatch = text.match(/UAN\s*[:\|]?\s*(\d{12})/i);
+  if (uanMatch) data.uan = uanMatch[1];
+
+  const dobMatch = text.match(/Date of Birth\s*[:\|]?\s*(\d{2}-\d{2}-\d{4})/i);
+  if (dobMatch) data.dob = dobMatch[1];
+
+  const parseAmt = (str: string) => parseFloat(str.replace(/,/g, '')) || 0;
+
+  const obMatch = text.match(/OB Int\. Updated upto \d{2}\/\d{2}\/\d{4}\s+([\d,]+)\s+([\d,]+)\s+([\d,]+)/i);
+  if (obMatch) {
+    data.openingBalanceEE = parseAmt(obMatch[1]);
+    data.openingBalanceER = parseAmt(obMatch[2]);
+    data.openingBalanceEPS = parseAmt(obMatch[3]);
+  }
   
+  const txnRegex = /([a-z]{3}-\d{4})\s+(\d{2}-\d{2}-\d{4})\s+(CR|DR)\s+(.+?)\s+([\d,]+)\s+([\d,]+)\s+([\d,]+)\s+([\d,]+)\s+([\d,]+)/gi;
+  let txnMatch;
+  while ((txnMatch = txnRegex.exec(text)) !== null) {
+    const isDebit = txnMatch[3].toUpperCase() === 'DR';
+    const multiplier = isDebit ? -1 : 1;
+
+    data.transactions.push({
+      wageMonth: txnMatch[1],
+      date: txnMatch[2],
+      particulars: txnMatch[4].trim(),
+      epfWage: parseAmt(txnMatch[5]),
+      epsWage: parseAmt(txnMatch[6]),
+      eeShare: parseAmt(txnMatch[7]) * multiplier,
+      erShare: parseAmt(txnMatch[8]) * multiplier,
+      epsShare: parseAmt(txnMatch[9]) * multiplier,
+      isInterest: false
+    });
+  }
+  
+  const interestRegex = /Int\. Updated upto \d{2}\/\d{2}\/\d{4}\s+([\d,]+)\s+([\d,]+)\s+([\d,]+)/gi;
+  let interestMatch;
+  while ((interestMatch = interestRegex.exec(text)) !== null) {
+    data.transactions.push({
+      date: 'Year End',
+      wageMonth: 'Annual',
+      particulars: 'Interest Credited',
+      epfWage: 0,
+      epsWage: 0,
+      eeShare: parseAmt(interestMatch[1]),
+      erShare: parseAmt(interestMatch[2]),
+      epsShare: parseAmt(interestMatch[3]),
+      isInterest: true
+    });
+  }
+
   return data;
 };
 
