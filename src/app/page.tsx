@@ -1,12 +1,13 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Portfolio, PensionAccount, EPFAccount, EPFData } from "@/lib/types";
+import { Portfolio, PensionAccount, EPFAccount, EPFData, NPSAccount } from "@/lib/types";
 import { ShieldCheck, Activity, Trash2, Home } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { migrateToPortfolio, mergeEPFData } from "@/lib/data-utils";
 import { PortfolioOverview } from "@/components/PortfolioOverview";
 import { EPFAccountView } from "@/components/EPFAccountView";
+import { NPSAccountView } from "@/components/NPSAccountView";
 import dynamic from "next/dynamic";
 import { v4 as uuidv4 } from "uuid";
 
@@ -237,6 +238,12 @@ export default function Dashboard() {
               onBack={() => setSelectedAccountId(null)} 
               onUpdate={handleAccountUpdated}
               onNewFileParsed={handleDataParsed}
+            />
+          ) : selectedAccount.type === 'NPS' ? (
+            <NPSAccountView 
+              account={selectedAccount as NPSAccount}
+              onBack={() => setSelectedAccountId(null)}
+              onUpdate={handleAccountUpdated}
             />
           ) : (
             <div className="text-center py-12">
