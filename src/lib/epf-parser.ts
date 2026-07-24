@@ -39,6 +39,8 @@ const extractDataFromText = (text: string): EPFData => {
   const estRegex = /Establishment ID\/Name\s*\|\s*([A-Z0-9]+)\s*\/\s*(.*)/i;
   const memberRegex = /Member ID\/Name\s*\|\s*([A-Z0-9]+)\s*\/\s*(.*)/i;
   
+  const parseAmt = (str: string) => parseFloat(str.replace(/,/g, '')) || 0;
+
   for (const line of lines) {
     if (estRegex.test(line)) {
       const match = line.match(estRegex);
@@ -58,27 +60,34 @@ const extractDataFromText = (text: string): EPFData => {
     } else if (line.includes("Date of Birth")) {
       const match = line.match(/Date of Birth\s*[:\|]?\s*(\d{2}-\d{2}-\d{4})/i);
       if (match) data.dob = match[1];
+    } else if (line.includes("OB Int. Updated upto")) {
+      const match = line.match(/OB Int\. Updated upto \d{2}\/\d{2}\/\d{4}\s+([\d,]+)\s+([\d,]+)\s+([\d,]+)/i);
+      // We only want the first opening balance if multiple years are present
+      if (match && data.openingBalanceEE === 0 && data.openingBalanceER === 0) {
+        data.openingBalanceEE = parseAmt(match[1]);
+        data.openingBalanceER = parseAmt(match[2]);
+        data.openingBalanceEPS = parseAmt(match[3]);
+      }
     }
     
-    // In a real scenario, this would parse tables. We simulate finding transaction lines.
-    // A typical transaction line: Date  WageMonth  Particulars  EPFWage EPSWage  EE  ER  EPS
-    // This regex looks for a date followed by month-year
-    const txnMatch = line.match(/(\d{2}-\d{2}-\d{4})\s+([A-Z]{3}-\d{4})\s+(.+?)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)/i);
+    // WageMonth Date Type Particulars EPFWage EPSWage EE ER EPS
+    const txnMatch = line.match(/([a-z]{3}-\d{4})\s+(\d{2}-\d{2}-\d{4})\s+(CR|DR)\s+(.+?)\s+([\d,]+)\s+([\d,]+)\s+([\d,]+)\s+([\d,]+)\s+([\d,]+)/i);
     if (txnMatch) {
       data.transactions.push({
-        date: txnMatch[1],
-        wageMonth: txnMatch[2],
-        particulars: txnMatch[3].trim(),
-        epfWage: parseFloat(txnMatch[4]),
-        epsWage: parseFloat(txnMatch[5]),
-        eeShare: parseFloat(txnMatch[6]),
-        erShare: parseFloat(txnMatch[7]),
-        epsShare: parseFloat(txnMatch[8]),
+        wageMonth: txnMatch[1],
+        date: txnMatch[2],
+        particulars: txnMatch[4].trim(),
+        epfWage: parseAmt(txnMatch[5]),
+        epsWage: parseAmt(txnMatch[6]),
+        eeShare: parseAmt(txnMatch[7]),
+        erShare: parseAmt(txnMatch[8]),
+        epsShare: parseAmt(txnMatch[9]),
         isInterest: false
       });
     }
     
-    const interestMatch = line.match(/Int\. Updated upto.*?(\d+)\s+(\d+)/i);
+    // Interest lines: Int. Updated upto 31/03/2026   52,056   42,886   0
+    const interestMatch = line.match(/Int\. Updated upto \d{2}\/\d{2}\/\d{4}\s+([\d,]+)\s+([\d,]+)\s+([\d,]+)/i);
     if (interestMatch) {
       data.transactions.push({
         date: 'Year End',
@@ -86,9 +95,9 @@ const extractDataFromText = (text: string): EPFData => {
         particulars: 'Interest Credited',
         epfWage: 0,
         epsWage: 0,
-        eeShare: parseFloat(interestMatch[1]),
-        erShare: parseFloat(interestMatch[2]),
-        epsShare: 0,
+        eeShare: parseAmt(interestMatch[1]),
+        erShare: parseAmt(interestMatch[2]),
+        epsShare: parseAmt(interestMatch[3]),
         isInterest: true
       });
     }
