@@ -89,7 +89,7 @@ const extractDataFromText = (text: string): EPFData => {
     }
     
     // Interest lines: Int. Updated upto 31/03/2026   52,056   42,886   0
-    const interestMatch = line.match(/Int\. Updated upto \d{2}\/\d{2}\/\d{4}\s+([\d,]+)\s+([\d,]+)\s+([\d,]+)/i);
+    const interestMatch = line.trim().match(/^Int\. Updated upto \d{2}\/\d{2}\/\d{4}\s+([\d,]+)\s+([\d,]+)\s+([\d,]+)/i);
     if (interestMatch) {
       data.transactions.push({
         date: 'Year End',

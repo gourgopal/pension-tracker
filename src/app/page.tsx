@@ -41,9 +41,11 @@ export default function Dashboard() {
   }, []);
 
   const handleDataParsed = (data: EPFData) => {
-    const newData = epfData ? mergeEPFData(epfData, data) : data;
-    setEpfData(newData);
-    localStorage.setItem("epfPulseData", JSON.stringify(newData));
+    setEpfData(prev => {
+      const newData = prev ? mergeEPFData(prev, data) : data;
+      localStorage.setItem("epfPulseData", JSON.stringify(newData));
+      return newData;
+    });
   };
 
   const handleDataUpdated = (data: EPFData) => {

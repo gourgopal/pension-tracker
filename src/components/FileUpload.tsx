@@ -46,13 +46,17 @@ export function FileUpload({ onDataParsed, compact = false }: FileUploadProps) {
     e.preventDefault();
     setIsDragging(false);
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      processFile(e.dataTransfer.files[0]);
+      for (const file of Array.from(e.dataTransfer.files)) {
+        await processFile(file);
+      }
     }
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      processFile(e.target.files[0]);
+      for (const file of Array.from(e.target.files)) {
+        await processFile(file);
+      }
     }
   };
 
@@ -80,6 +84,7 @@ export function FileUpload({ onDataParsed, compact = false }: FileUploadProps) {
         ref={fileInputRef}
         onChange={handleFileChange}
         accept="application/pdf"
+        multiple
         className="hidden"
       />
       
