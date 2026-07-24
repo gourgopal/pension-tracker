@@ -82,7 +82,7 @@ const extractDataFromText = (text: string): EPFData => {
     });
   }
   
-  const interestRegex = /Int\. Updated upto \d{2}\/\d{2}\/\d{4}\s+([\d,]+)\s+([\d,]+)\s+([\d,]+)/gi;
+  const interestRegex = /(?<!OB )Int\. Updated upto \d{2}\/\d{2}\/\d{4}\s+([\d,]+)\s+([\d,]+)\s+([\d,]+)/gi;
   let interestMatch;
   while ((interestMatch = interestRegex.exec(text)) !== null) {
     data.transactions.push({
