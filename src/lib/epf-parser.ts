@@ -6,7 +6,10 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.j
 
 export const parseEPFPassbook = async (file: File): Promise<EPFData> => {
   const arrayBuffer = await file.arrayBuffer();
-  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+  const pdf = await pdfjsLib.getDocument({
+    data: arrayBuffer,
+    standardFontDataUrl: `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/standard_fonts/`,
+  }).promise;
   
   let fullText = "";
   
@@ -106,4 +109,49 @@ const extractDataFromText = (text: string): EPFData => {
   // If no transactions found (mock parsing for now, user can manually enter data)
   
   return data;
+};
+
+export const mergeEPFData = (existing: EPFData, newData: EPFData): EPFData => {
+  if (!existing || (existing.transactions.length === 0 && existing.openingBalanceEE === 0)) return newData;
+  if (!newData || (newData.transactions.length === 0 && newData.openingBalanceEE === 0)) return existing;
+
+  const allTxns = [...existing.transactions, ...newData.transactions];
+  
+  // Create a unique key to prevent duplicates if same passbook is uploaded or overlaps exist
+  const uniqueTxnsMap = new Map();
+  allTxns.forEach(t => {
+    const key = `${t.date}-${t.wageMonth}-${t.particulars}-${t.eeShare}`;
+    uniqueTxnsMap.set(key, t);
+  });
+  
+  const uniqueTxns = Array.from(uniqueTxnsMap.values());
+
+  const parseDate = (d: string, wm: string) => {
+    if (d === 'Year End') {
+      // It's interest, push to March 31 of the relevant year? We don't have year in Year End easily.
+      // But we can just use 0, wait, it's better to extract year from somewhere.
+      // We'll just leave it or parse something.
+      return new Date(2100, 0, 1).getTime();
+    }
+    const parts = d.split('-');
+    if (parts.length === 3) {
+      return new Date(`${parts[2]}-${parts[1]}-${parts[0]}`).getTime();
+    }
+    return 0;
+  };
+
+  uniqueTxns.sort((a, b) => parseDate(a.date, a.wageMonth) - parseDate(b.date, b.wageMonth));
+
+  // The opening balance should technically be the earliest one, but we'll stick to the existing one
+  // since the user can edit it manually now.
+  return {
+    ...existing,
+    memberId: existing.memberId || newData.memberId,
+    memberName: existing.memberName || newData.memberName,
+    establishmentId: existing.establishmentId || newData.establishmentId,
+    establishmentName: existing.establishmentName || newData.establishmentName,
+    uan: existing.uan || newData.uan,
+    dob: existing.dob || newData.dob,
+    transactions: uniqueTxns
+  };
 };

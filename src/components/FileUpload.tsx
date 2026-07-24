@@ -7,9 +7,10 @@ import { EPFData } from "@/lib/types";
 
 interface FileUploadProps {
   onDataParsed: (data: EPFData) => void;
+  compact?: boolean;
 }
 
-export function FileUpload({ onDataParsed }: FileUploadProps) {
+export function FileUpload({ onDataParsed, compact = false }: FileUploadProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [loading, setLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -60,15 +61,19 @@ export function FileUpload({ onDataParsed }: FileUploadProps) {
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
-      className={`border-2 border-dashed rounded-xl p-12 text-center transition-all ${
-        isDragging ? "border-blue-500 bg-blue-50/50" : "border-slate-300 hover:border-blue-400"
-      }`}
+      className={`border-2 border-dashed rounded-xl text-center transition-all ${
+        isDragging ? "border-blue-500 bg-blue-50/50" : "border-slate-300 hover:border-blue-400 bg-white"
+      } ${compact ? "p-4" : "p-12"}`}
     >
-      <UploadCloud className="w-12 h-12 text-slate-400 mx-auto mb-4" />
-      <h3 className="text-lg font-semibold text-slate-700">Drag & Drop your EPF Passbook PDF</h3>
-      <p className="text-sm text-slate-500 mt-2 mb-6">
-        All processing happens directly in your browser. 100% private.
-      </p>
+      {!compact && (
+        <>
+          <UploadCloud className="w-12 h-12 text-slate-400 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-slate-700">Drag & Drop your EPF Passbook PDF</h3>
+          <p className="text-sm text-slate-500 mt-2 mb-6">
+            All processing happens directly in your browser. 100% private.
+          </p>
+        </>
+      )}
       
       <input
         type="file"
@@ -81,9 +86,12 @@ export function FileUpload({ onDataParsed }: FileUploadProps) {
       <button
         onClick={() => fileInputRef.current?.click()}
         disabled={loading}
-        className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-lg shadow-sm transition-colors disabled:opacity-50"
+        className={`bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg shadow-sm transition-colors disabled:opacity-50 flex items-center justify-center w-full ${
+          compact ? "py-1.5 px-3 text-sm" : "py-2 px-6"
+        }`}
       >
-        {loading ? "Parsing PDF..." : "Select File"}
+        <UploadCloud className={`mr-2 ${compact ? "w-4 h-4" : "hidden"}`} />
+        {loading ? "Parsing..." : "Select File"}
       </button>
     </div>
   );

@@ -10,10 +10,16 @@ import { EPFData } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Download, Trash2, ShieldCheck, Activity } from "lucide-react";
+import { Download, Trash2, ShieldCheck, Activity, Plus } from "lucide-react";
+import { mergeEPFData } from "@/lib/epf-parser";
 
 const FileUpload = dynamic(
   () => import("@/components/FileUpload").then((mod) => mod.FileUpload),
+  { ssr: false }
+);
+
+const DataEditor = dynamic(
+  () => import("@/components/DataEditor").then((mod) => mod.DataEditor),
   { ssr: false }
 );
 
@@ -35,8 +41,30 @@ export default function Dashboard() {
   }, []);
 
   const handleDataParsed = (data: EPFData) => {
+    const newData = epfData ? mergeEPFData(epfData, data) : data;
+    setEpfData(newData);
+    localStorage.setItem("epfPulseData", JSON.stringify(newData));
+  };
+
+  const handleDataUpdated = (data: EPFData) => {
     setEpfData(data);
     localStorage.setItem("epfPulseData", JSON.stringify(data));
+  };
+
+  const startFromScratch = () => {
+    const emptyData: EPFData = {
+      establishmentId: '',
+      establishmentName: '',
+      memberId: '',
+      memberName: '',
+      uan: '',
+      dob: '',
+      openingBalanceEE: 0,
+      openingBalanceER: 0,
+      openingBalanceEPS: 0,
+      transactions: []
+    };
+    handleDataUpdated(emptyData);
   };
 
   const clearData = () => {
@@ -119,6 +147,12 @@ export default function Dashboard() {
               </p>
             </div>
             <FileUpload onDataParsed={handleDataParsed} />
+            <div className="mt-8 text-center">
+              <span className="text-sm text-slate-500 block mb-3">Or don't have a PDF?</span>
+              <Button onClick={startFromScratch} variant="outline" className="bg-white border-slate-300 text-slate-700 hover:bg-slate-50">
+                Start from scratch (Manual Entry)
+              </Button>
+            </div>
           </div>
         ) : (
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -143,6 +177,7 @@ export default function Dashboard() {
               <TabsList className="bg-slate-100 p-1">
                 <TabsTrigger value="overview">Overview</TabsTrigger>
                 <TabsTrigger value="projection">Retirement Projection</TabsTrigger>
+                <TabsTrigger value="data-editor">Data Editor</TabsTrigger>
               </TabsList>
               
               <TabsContent value="overview" className="mt-6 space-y-6">
@@ -172,6 +207,19 @@ export default function Dashboard() {
                   currentCorpus={currentCorpus} 
                   monthlyContribution={latestMonthlyContribution} 
                 />
+              </TabsContent>
+              
+              <TabsContent value="data-editor" className="mt-6">
+                <div className="mb-6 bg-blue-50 border border-blue-100 p-4 rounded-xl flex items-center justify-between">
+                  <div>
+                    <h3 className="font-medium text-blue-900">Have more passbooks?</h3>
+                    <p className="text-sm text-blue-700 mt-1">Upload another PDF for a different year to consolidate your timeline.</p>
+                  </div>
+                  <div className="w-64">
+                    <FileUpload onDataParsed={handleDataParsed} compact={true} />
+                  </div>
+                </div>
+                <DataEditor data={epfData} onUpdate={handleDataUpdated} />
               </TabsContent>
             </Tabs>
           </div>
