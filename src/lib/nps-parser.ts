@@ -45,23 +45,35 @@ const extractNPSDataFromText = (text: string): NPSAccount => {
   }
 
   // Attempt to extract 'Value of your Holdings'
-  // Depending on how pdf.js extracts the table (row-by-row vs column-by-column)
-  // If row-by-row, the headers (A) (B) (C) D=(A-B)+C are printed, followed by the values starting with Holding.
-  const rowMatch = text.match(/D=\(A-B\)\+C\s*([\d,\.]+)/);
-  if (rowMatch) {
-    data.openingBalanceTier1 = parseFloat(rowMatch[1].replace(/,/g, '')) || 0;
-  } else {
-    // If column-by-column, (A) is directly followed by the holding value
-    const colMatch = text.match(/\(A\)\s*([\d,\.]+)/);
-    if (colMatch) {
-      data.openingBalanceTier1 = parseFloat(colMatch[1].replace(/,/g, '')) || 0;
-    } else {
-      // Fallback, try to find a large number after "Value of your Holdings" skipping the date
-      const explicitMatch = text.match(/Value of your Holdings(?:.|\n)*?\(in Rs\)(?:.|\n)*?(?:D=\(A-B\)\+C|\(A\))(?:.|\n)*?([\d,\.]+)/i);
-      if (explicitMatch) {
-        data.openingBalanceTier1 = parseFloat(explicitMatch[1].replace(/,/g, '')) || 0;
+  // The table headers usually end with "D=(A-B)+C" and "Return on Investment (XIRR)"
+  // The values follow immediately after.
+  let foundHolding = false;
+  
+  const keywords = ["Return on Investment (XIRR)", "D=(A-B)+C", "(A) No of Contributions"];
+  
+  for (const keyword of keywords) {
+    const idx = text.indexOf(keyword);
+    if (idx !== -1) {
+      const afterStr = text.substring(idx + keyword.length).trim();
+      const tokens = afterStr.split(/\s+/);
+      
+      for (const token of tokens) {
+        // Skip text tokens, percentages, and NA
+        if (token.includes('%') || token.includes('N.A.') || token === '-') continue;
+        if (isNaN(parseFloat(token.charAt(0)))) continue; // Fast check if it starts with a number
+        
+        const cleanToken = token.replace(/,/g, '');
+        const val = parseFloat(cleanToken);
+        // Ensure it's a valid number and > 1000 to avoid matching stray date numbers (like 8, 30) if layout is very weird
+        // Holdings are typically larger than a few thousands
+        if (!isNaN(val) && val > 1000) {
+          data.openingBalanceTier1 = val;
+          foundHolding = true;
+          break;
+        }
       }
     }
+    if (foundHolding) break;
   }
 
   // TODO: Implement actual parsing of Tier 1 & 2 balances and transactions.
